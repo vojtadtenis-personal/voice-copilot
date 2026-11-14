@@ -53,11 +53,11 @@ No production model request was forwarded. Native metadata requests are distinct
 | SDK.QUEUE_WITHDRAW_GUARD / SDK.QUEUE_WITHDRAW | PASSED: wrong expectedPrompt did not remove; exact prompt removed without interrupting running turn. |
 | SDK.QUEUE_REMOVE / SDK.QUEUE_CLEAR | PASSED: native item ID removed; clear pending count=0. |
 | SDK.WAIT_TIMEOUT | PASSED: 200 ms SendAndWait timeout did not abort the already active intercepted runtime request. |
-| SDK.MODEL_DEFERRED | PASSED: busy target claude-sonnet-5.5; Deferred=true, QueueId present, Status=applied, confirmation absent, live model still initial. Change explicitly cleared. |
+| SDK.MODEL_DEFERRED | PASSED: busy target claude-sonnet-5.5; Deferred=true, QueueId present, Status=applied, confirmation absent; GetCurrent independently confirmed initial effective model. Change explicitly cleared. |
 | SDK.ALLOW_ALL / SDK.AUTOPILOT | PASSED: effective AllowAll at create/RPC readback; ModeApplied + Get(Autopilot) before send; continuation disabled, tools denied. |
-| SDK.CONCURRENT / SDK.ABORT_ISOLATION | PASSED: two distinct simultaneous held runtime requests; first abort did not cancel second. |
+| SDK.CONCURRENT / SDK.ABORT_ISOLATION | PASSED: two distinct simultaneous held runtime requests; first request token cancelled after abort while second remained active. |
 | SDK.ROOT_CORRELATION | PASSED: root user.message on second session echoed its acceptance ID/ClientTurnId. |
-| SDK.ABORT / SDK.STOP | PASSED: actual runtime abort and own client stop; no side effects/rollback guarantee tested. |
+| SDK.ABORT / SDK.STOP | PASSED: actual request cancellation token confirmed cancelled after AbortAsync, own client stopped; no side effects/rollback guarantee tested. |
 | SDK.RESUME_NO_SEND / SDK.COLD_RESUME_PENDING | BLOCKED: attempted detach/resume with ContinuePendingWork=false failed (IOException); cold pending fixture/locks not proved. No fallback Send. |
 | SDK.DELETE / SDK.SECOND_DELETE | BLOCKED: native delete refused only owned diagnostic session IDs after detach. No unrelated session modified. |
 | SDK.COMPLETION_STREAMING_USAGE | BLOCKED: no live response/deltas, originating-message answer/error, per-role usage or autopilot terminal evidence. |
@@ -122,12 +122,19 @@ Installed nupkg SHA256 (lock file also retains NuGet content hashes):
 - Whisper.net 1.9.1: `b501cb8743e6c67b504cf194ec0bdbcaf21a1c0951a0f28cc82516d743ba1ecb`
 - Whisper.net.Runtime 1.9.1: `b5224f0dad44d5eb8233e5d83f4333a8a3fccadc77095f50f361f06d65e0736b`
 - NAudio 3.3.0: `fa2088e054d4227319f1ff6d93565d4018990e952a7665916335ff38b72a932a`
+- Microsoft.ML.OnnxRuntime 1.32.0: `a9150bc2992cbbb6722070da9910e1ffa989a8bfc67bdd5bb8e745ca755641db`
 
 ## UI actual results / canary
 
 Local `ui-local` process exit **0**: UI.STA, UI.SELECTION, UI.PNG_ENCODING passed.
 No shown window, global clipboard/keyboard/focus mutation on the shared local host.
 
-The real `ui-canary` runs **only** on this repository's disposable public Windows
-runner via the branch-only push workflow. Its result/run URL is pending first
-publication. No manual QA or pending canary is completion evidence.
+The real `ui-canary` is restricted **only** to this repository's disposable public
+Windows runner. **Publication/activation BLOCKED**: both MCP workflow writes
+(`push_files`, `create_or_update_file`) returned **Re-authentication required**.
+Ordinary contents/read access still worked; a browser check was unauthenticated.
+No interactive login, credential extraction/new app token or authorization bypass.
+The inert [workflow proposal](d02-feasibility.workflow.yml) is committed for review;
+the intended `.github/workflows/d02-feasibility.yml` is local-only and untracked.
+**Actual workflow runs: zero; run/job URLs: none; UIA/real clipboard/keyboard/focus
+canary coverage: BLOCKED.** A manual QA checklist is not a substitute.

@@ -98,7 +98,8 @@ certificate; subsequent calls explicitly disable certificate generation.
   guarantee and do not replace the future app-local **unsent** snapshot queue.
 - [O] A SendAndWait timeout stopped the .NET wait, not the already running held
   runtime request. Abort stopped that request; two distinct sessions were held
-  concurrently and aborting one did not cancel the other.
+  concurrently; the aborted request's actual cancellation token was cancelled
+  while the other request's token remained active.
 - [O] Create applied AllowAll before returning, confirmed by PermissionModeResult
   and RPC GetMode. Actual mode Set(Autopilot), ModeApplied and Get were checked
   **before send**. Continuation is disabled/bounded in this probe; options alone
@@ -107,7 +108,8 @@ certificate; subsequent calls explicitly disable certificate generation.
 - [O] Busy switch to **claude-sonnet-5.5** with Default tier and
   DeferIfModelChangeQueued returned **Deferred=true, QueueId present,
   Status=applied, unchanged live model**. Status alone is not effective-model proof.
-  The queued change was explicitly cleared. With additional RequireAvailable,
+  GetCurrent independently confirmed the still-effective model. The queued
+  change was explicitly cleared. With additional RequireAvailable,
   the intercepted catalog rejection instead produced cancelled/no queue entry.
 - [P] Assistant deltas, originating-message error/answer correlation, real
   subagent filtering, per-role usage, autopilot terminal RequestId/Reason and
@@ -182,7 +184,7 @@ Weights, WAVs, credentials, installers, native downloads and NuGet output are ig
 [O] Local STA, composer-selection preservation and an injected owned bitmap
 round-trip passed without showing a window or touching shared-host input/clipboard.
 
-[P] The branch-only push workflow `d02-feasibility.yml` uses one **windows-2025
+[P] The proposed branch-only push workflow `d02-feasibility.yml` uses one **windows-2025
 standard public** job, a public-visibility/repository/branch guard, preinstalled
 SDK 10, native public Git checkout without credentials, and built-in UIAutomation.
 No marketplace action, live Copilot credentials/calls, service, artifact or
@@ -191,7 +193,17 @@ It constructs an owned nonactivating WPF window, locates and invokes own UIA
 controls, directs F6 only to its HWND, round-trips a synthetic clipboard bitmap,
 and checks foreground handle before/after/close.
 
-**CI run result pending publication; no unattended UI pass is claimed yet.**
+**BLOCKED: no CI workflow/job/run was activated.** Both MCP `push_files` and
+`create_or_update_file` rejected `.github/workflows/d02-feasibility.yml` with
+**"Re-authentication required"**. Existing ordinary file/branch/read permissions
+still worked; the exact missing scope is not diagnosed. A read-only browser check
+found no existing authenticated GitHub session. No login, token extraction,
+new app token or permission workaround was attempted.
+The candidate workflow is retained for review as the **inert**
+[`probes/D02.Feasibility/d02-feasibility.workflow.yml`](../probes/D02.Feasibility/d02-feasibility.workflow.yml);
+the intended `.github/workflows/d02-feasibility.yml` also remains an unpublished
+local file in the ticket worktree. It is not represented as a published workflow.
+**Run/job URLs: none. Unattended desktop/UIA/real clipboard/keyboard remain BLOCKED.**
 Unsupported desktop/UIA/keyboard hosts must fail explicitly, not become a manual
 QA checklist. This canary is not packaged product/input-parity qualification.
 
