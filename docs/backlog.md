@@ -50,7 +50,10 @@ and the requirement-to-ticket/test table; they are not repeated here.
   separately authorized, not permission to buy capacity/enable overages. Track
   separate inference usage; no guessed allowance amounts or initial hard app
   budget. Real tests use authorized isolated contexts; missing credentials,
-  account limits or runtime policy are blocked states, never success.
+  account limits or runtime policy are blocked states, never success. D06/D07
+  bound live-run call counts/retries and stop on reported allowance exhaustion
+  or unauthorized overage. This is not a new product quota/user cap or purchased
+  budget; fallback uses authorized existing capacity only, no paid provider.
 
 ## Epic D - Product definition and finalized design
 
@@ -70,15 +73,22 @@ precedes production. Independent review validates the documents before merge.
 Dependencies: D01.
 
 Deliver: evidence for selected .NET/WPF baseline, released SDK/runtime pairing,
-authentication, create/resume, streaming/completion, abort, autopilot,
-permissions, model listing, tool-free inference, local English ASR and
-unattended Windows UI testing. Investigate actual attachment forwarding and
-ASR hints; keep probes distinct from production.
+authentication, create/resume, streaming/completion, send
+acknowledgement/correlation/idempotency, concurrent sessions, abort/no-rollback
+and accepted-work cancellation limits, autopilot/permissions, model listing,
+switching models on an existing session with effective/pending ordering,
+per-context usage/eligible quota reporting, isolated tool-free inference,
+file/image forwarding, local English ASR/hint support/limitations, unattended
+Windows UI and passive restore without executing pending work.
+Keep probes distinct from production.
 
 Acceptance: reproducible versions/results, supported platforms, measured
 resources, limitations and alternatives; restoration cannot resume pending
 execution. No assumed GPU/RAM/format support or unrun live success. Stay inside
 authorized existing allowance and report missing prerequisites accurately.
+All pending experiments remain explicitly unverified, including unavailable
+usage/quota reporting and native idempotency/unsend limitations; no invented
+numeric quota or impossible cancellation promise.
 
 ### D03 - Clean architecture and decision records
 Dependencies: D01, D02.
@@ -102,6 +112,19 @@ speech, quoted commands, manual edits during cleanup and explicit finish+submit.
 Acceptance: every transition has an outcome; no general commands in prompt
 mode, implicit submission, stale-target execution or duplicate delivery.
 Define manual send during capture, deferred models and close/abort races.
+Specify boundary-only LLM segmentation BEFORE catalog planning, even when a
+mixed utterance starts in command mode: only safe outside-prompt spans reach
+the catalog, never literal payload or unsegmented invalid boundary fallback.
+Treat transcripts/spans/filenames/dictionary as untrusted DATA that cannot
+change system/schema/capability contracts. Define deterministic protected
+token/literal/number/negation/path and bounded edit/range validation, not schema
+validity as proof of preservation. Cleaner failure/timeout/invalid/stale output
+keeps raw/current text visibly "not cleaned"; an already explicit send proceeds
+with that draft without extra approval, while ASR-finalization failure is a
+distinct visible failed send. Define app-local queue cancellation ownership
+and editable pending-snapshot representation/UI: stop/close/restart retain
+unsent snapshots and revoke automatic dispatch until a new explicit send.
+No rollback of workspace edits/started side effects or impossible native unsend.
 
 ### D05 - UI and input interaction design
 Dependencies: D04.
@@ -126,6 +149,12 @@ Acceptance: critical requirements have automated verification and real
 execution environments; no mandatory human listening/clickthrough; fakes and
 blocked live tests are labeled; semantic, concurrency and input parity cases
 cannot be replaced by trivial adapter assertions.
+Include adversarial mixed payload close/stop/send words, invalid boundary
+segmentation, silence-not-end/not-submit, hostile DATA, schema-valid but
+preservation-invalid cleanup, raw-send recovery and retained unsent snapshots.
+Bound live-run calls/retries, stop on reported allowance exhaustion/unauthorized
+overage and label eligible quota reporting limitations, without numeric
+account assumptions or a new product allowance cap.
 
 ### D07 - Autonomous delivery and repository governance design
 Dependencies: D02, D06.
@@ -143,6 +172,9 @@ credential/dispatch solution before M02. No new paid bot service. Specify
 independent evidence/check instead of author approval, latest-base validation,
 explicitly uncached standard-runner jobs/log summaries, and current documented
 free Release asset limits/unsigned distribution.
+Define bounded live-run calls/retries and visible stop on reported account
+exhaustion or paid-beyond-authorized allowance; no purchased budget, overage
+enablement, arbitrary user quota or external paid provider.
 
 ### D08 - Final design consistency gate
 Dependencies: D01, D02, D03, D04, D05, D06, D07.
@@ -185,6 +217,7 @@ Dependencies: M02.
 Deliver: stable session IDs/numbers, positional open tabs, selection,
 create/open/resume/rename/close, basic saved history access, creation/model
 defaults, close semantics, neutral working-folder policy and shared use cases.
+Rename is basic session naming, not app task reasoning.
 
 Acceptance: reorder/close/reopen, stale references, inherited models and stable
 numbers; no mandatory project/entity and no WPF/SDK dependency in
@@ -197,8 +230,8 @@ Deliver: append/edit/clear/replace/undo/redo, revisions, speech-owned edits,
 atomic mappings/draft/history/folder persistence and schema versioning.
 
 Acceptance: append existing text, manual edits during delayed cleanup, undo,
-interrupted writes and passive restore without submission; never persist
-mute state or raw audio.
+interrupted writes and passive restore without submission; never persist mute
+state. Raw audio is not retained by default; no recording feature is added.
 
 ### M05 - Copilot SDK session adapter
 Dependencies: M03.
@@ -211,6 +244,9 @@ Acceptance: protocol ordering, disconnects, cancelled wait versus actual abort,
 completion and managed refusal. Isolated authenticated actual-runtime smoke
 uses authorized existing allowance; missing prerequisites/policy limits block,
 not pass. No runtime/credential/consent restriction bypass.
+Verify acknowledgement/correlation/idempotency and concurrent-session behavior
+against D02 evidence; abort never rolls back performed workspace edits or
+guarantees cancellation of already-started effects.
 
 ### M06 - Per-session execution and dispatch queues
 Dependencies: M04, M05.
@@ -221,6 +257,10 @@ stop/close and duplicate protection; busy sessions do not block each other.
 Acceptance: concurrent sessions, repeated acknowledgements, uncertain sends,
 late events, abort races and busy-tab close with retained history/draft.
 No blind retry of possibly accepted prompts, stale-target sends or replay.
+App-local queues retain every unsent snapshot as a nonexecuting editable
+pending draft on stop/close/emergency stop/restart, requiring a new explicit
+send; do not drop or dispatch them automatically. D02 must verify limits of
+accepted/uncertain native work, not promise an impossible unsend or rollback.
 
 ### M07 - Functional WPF shell and normal input
 Dependencies: M03, M04.
@@ -241,41 +281,56 @@ integrity-checked assets and bounded processing.
 
 Acceptance: onset, pauses, long speech, repeated windows, silence/noise, device
 loss, bounded buffers and throughput on declared reference environment.
-No universal hardware/GPU/RAM guarantee or raw-audio persistence.
+No universal hardware/GPU/RAM guarantee; raw audio not retained by default.
 
 ### M09 - Tool-free cloud inference and visible fallback
 Dependencies: M05.
 
-Deliver: authenticated isolated command/ending/cleanup inference contexts,
+Deliver: authenticated isolated command/boundary-only/cleanup inference contexts,
 model catalog, available Haiku preference, compatible visible fallback, bounded
 context, validated outputs and separately tracked usage, no initial hard budget.
 
 Acceptance: unavailable models, timeout, malformed/superseded outputs and
 exhausted alternatives; no repository/shell tools in inference contexts and
-no action catalog in ending context. No guessed allowance/purchased capacity.
+no action catalog/tools in boundary context. All user transcripts, spans,
+filenames and dictionary strings remain untrusted DATA, never changes to
+system/schema/capability contracts. Fallback stays within authorized existing
+capacity; stop visibly on reported exhaustion/unauthorized paid allowance.
+No guessed numeric quota, purchased capacity or external paid provider.
 
 ### M10 - Command interpreter and strict prompt boundaries
 Dependencies: M06, M09.
 
 Deliver: initial action registry, ordered planning, natural start-prompt,
-restricted ending detection and multiple mode boundaries in one utterance.
+boundary-only LLM classification of start/end BEFORE catalog interpretation,
+and multiple mode boundaries in one utterance. Process command prefix ->
+BeginPrompt -> literal body -> accepted end -> command suffix in order.
 MVP covers sessions, draft entry/exit/basic editing, explicit submit, stop
 and scrolling integrated by M12.
 
 Acceptance: state/corpus tests prevent prompt text invoking handlers; quoted,
 reported and negated endings, compound utterances, invalid actions/stale tabs.
-No fixed-phrase whitelist, app task interview or invented unresolved targets.
+Only safe outside-prompt command spans reach catalog-bearing interpretation,
+even if the mixed utterance arrived in command mode; prompt payload NEVER
+reaches broad planning. Invalid boundary spans fail visibly with no unsegmented
+broad fallback. Include payload close/stop/send words and silence-not-end/
+not-submit. No fixed-phrase whitelist, task interview or invented targets.
 
 ### M11 - Conservative cleanup and draft reconciliation
 Dependencies: M04, M09.
 
 Deliver: clean newly dictated text only, preservation rules/original text,
-revision-aware application; cleanup finalization precedes explicitly
-authorized sending.
+revision-aware application and deterministic protected-token/literal/number/
+negation/path preservation plus bounded edit/range checks before application.
+Schema validity alone cannot prove preservation.
 
 Acceptance: protect negations/numbers/quantities/paths/identifiers/requirements
 and manual text; no restructuring or overwrite of newer edits; failures
-visible and never authorize submission. Preserve uncertain words and undo.
+visible and never generate submission. Invalid/stale output, failure or timeout
+leaves raw/current text intact with "not cleaned" status. After an already
+explicit send, bounded cleaner failure sends the current raw/manual draft
+without extra approval; ASR-finalization failure is separate, not cleanup
+success. Preserve uncertain words and undo.
 
 ### M12 - Voice and manual transcript scrolling
 Dependencies: M07, M10.
@@ -297,7 +352,12 @@ local mute/emergency stop and no wake phrase/spoken/audio output.
 Acceptance: true create/select/dictate/finish/review/execute/stop and
 same-utterance finish+execute; ending alone never sends. Enter/Send during
 capture finalizes safely; normal input never depends on voice inference.
-Tab switches do not retarget dictation.
+Tab switches do not retarget dictation. Bounded cleanup failure never creates
+a Send or vetoes an already explicit send of finalized raw/manual text;
+unfinalized ASR fails visibly and preserves text, never masquerading as success.
+Local responsive mute/stop uses mouse/keyboard/hotkey paths; command-mode voice
+still needs available inference, not a local keyword whitelist. No rollback
+of performed workspace edits or guaranteed cancellation of started effects.
 
 ### M14 - MVP lifecycle and failure recovery
 Dependencies: M13.
@@ -307,7 +367,10 @@ stale-work retirement, without restoring data by accidentally resuming work.
 
 Acceptance: interrupted capture/cleanup/SDK/persistence/shutdown; no restart
 autosend/audio replay/task execution/mute restore; local mute/stop responsive
-during cloud failure and normal input remains usable.
+during cloud failure through mouse/keyboard/hotkey and normal input remains
+usable. Preserve every unsent queued snapshot as nonexecuting editable pending
+data across stop/close/restart, each needing a new explicit send; no silent loss
+or automatic dispatch and no promised native unsend/workspace rollback.
 
 ### M15 - Packaged MVP artifact
 Dependencies: M13.
@@ -329,6 +392,9 @@ SDK/inference smoke and unattended Windows UI environment.
 Acceptance: actual MVP journeys, modes, scrolling, concurrency and input
 parity. Deterministic fakes cannot replace proving real integrations; report
 actual versions/resource limits and missing prerequisites.
+Include adversarial compound boundaries, raw-send cleanup recovery,
+ASR-finalization failure and retained unsent snapshots; bound live calls/retries
+and stop on reported allowance exhaustion/unauthorized overage.
 
 ### M17 - MVP maintainability and completion gate
 Dependencies: M16.
@@ -431,7 +497,10 @@ resource ownership, credential/logging and failure-handling review findings.
 
 Acceptance: malformed output, command-like prompt text, late callbacks,
 duplicates, partial writes/policy refusal; coding allow-all never enables
-control/ending/cleanup tools. No leaking credentials or hidden success defaults.
+command/boundary/cleanup tools. No leaking credentials or hidden success defaults.
+Audit hostile transcripts/spans/filenames/dictionary DATA, mixed-utterance
+payload isolation and deterministic cleanup preservation checks; schema-valid
+output is not sufficient evidence. No impossible abort rollback/native unsend.
 
 ### R02 - Performance and soak qualification
 Dependencies: V08.
@@ -451,7 +520,9 @@ ownership.
 
 Acceptance: older-data fixtures survive; preserve referenced/user assets,
 IDs/order/drafts/history/folders/dictionary/model choices; restore never sends
-prompts, replays audio, restores mute or restarts tasks.
+prompts, replays audio, restores mute or restarts tasks. Retain unsent snapshots
+as editable nonexecuting pending drafts requiring new explicit sends; raw audio
+is not retained by default, with no new recording feature.
 
 ### R04 - Release pipeline and installation validation
 Dependencies: R01, R02, R03.
