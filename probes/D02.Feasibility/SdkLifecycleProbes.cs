@@ -50,7 +50,8 @@ internal static class SdkLifecycleProbes
                 ContextTier = ContextTier.Default,
                 DeferIfModelChangeQueued = true,
             }, ct);
-            results.Check("SDK.MODEL_DEFERRED", switched.Deferred == true && !string.IsNullOrEmpty(switched.QueueId) && switched.ModelId == model,
+            var effective = await first.Rpc.Model.GetCurrentAsync(ct);
+            results.Check("SDK.MODEL_DEFERRED", switched.Deferred == true && !string.IsNullOrEmpty(switched.QueueId) && switched.ModelId == model && effective.ModelId == model,
                 $"target={otherModel.Id}; deferred={switched.Deferred}; queueIdPresent={!string.IsNullOrEmpty(switched.QueueId)}; status={switched.Status}; confirmationPresent={switched.Confirmation is not null}; live model unchanged");
             await first.Rpc.Queue.ClearAsync(ct);
         }
@@ -77,8 +78,10 @@ internal static class SdkLifecycleProbes
             handler.ActiveRequests.TryGetValue(second.SessionId, out var request2) && !request2.IsCancellationRequested,
             "Two distinct real sessions have simultaneous held model requests; actual model calls=0.");
         await first.AbortAsync(ct);
-        results.Check("SDK.ABORT_ISOLATION", handler.ActiveRequests.TryGetValue(second.SessionId, out var stillRunning) && !stillRunning.IsCancellationRequested,
-            "Aborting first session leaves second runtime request active.");
+        results.Check("SDK.ABORT_ISOLATION",
+            handler.ActiveRequests.TryGetValue(first.SessionId, out var aborted) && aborted.IsCancellationRequested &&
+            handler.ActiveRequests.TryGetValue(second.SessionId, out var stillRunning) && !stillRunning.IsCancellationRequested,
+            "First runtime request token is cancelled; second remains active after the first session abort.");
         await second.AbortAsync(ct);
         results.Check("SDK.ROOT_CORRELATION", secondEvents.OfType<UserMessageEvent>().Any(e =>
             string.IsNullOrEmpty(e.AgentId) && e.Data.MessageId == secondId && e.Data.ClientTurnId == "D02-second"),
@@ -117,7 +120,6 @@ internal static class SdkLifecycleProbes
             await resumed.Rpc.Queue.SetDrainPausedAsync(true, ct);
             await resumed.Rpc.Queue.ClearAsync(ct);
             await resumed.AbortAsync(ct);
-            results.Add("SDK.COLD_RESUME_PENDING", "BLOCKED", "Warm detach/resume is distinct: process restart, abandoned tool calls, locks and persistent queue recovery remain unverified.");
         }
         catch (Exception error) when (error is not OperationCanceledException)
         {

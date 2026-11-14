@@ -155,7 +155,8 @@ internal static class SdkProbes
         results.Check("SDK.CORRELATION", events.OfType<UserMessageEvent>().Any(e => e.Data.MessageId == messageId && e.Data.ClientTurnId == turnId),
             "Actual user.message echoes accepted MessageId and ClientTurnId.");
         results.Add("SDK.EVENTS", "OBSERVED", string.Join(",", events.Select(e => e.Type).Distinct().Order()));
-        results.Check("SDK.ABORT", handler.ModelUpstreamCalls == 0, "AbortAsync returned; no model call and no workspace rollback claim.");
+        results.Check("SDK.ABORT", handler.ActiveRequests.TryGetValue(session.SessionId, out var abortedRequest) && abortedRequest.IsCancellationRequested,
+            "AbortAsync returned and the intercepted runtime request cancellation token is cancelled; no workspace rollback claim.");
         results.Add("SDK.COMPLETION_STREAMING_USAGE", "BLOCKED", "No live response: terminal autopilot, deltas and per-context usage not verified.");
         await SdkLifecycleProbes.ResumeAsync(client, session, handler, model.Id, results, ct);
         await session.DisposeAsync();
