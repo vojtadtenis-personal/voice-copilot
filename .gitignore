@@ -1,0 +1,4 @@
+# D02 diagnostic acquisitions, owned fixtures, and build output.
+probes/D02.Feasibility/.assets/
+probes/D02.Feasibility/bin/
+probes/D02.Feasibility/obj/
