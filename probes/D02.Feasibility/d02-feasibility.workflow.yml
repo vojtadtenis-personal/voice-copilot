@@ -1,0 +1,50 @@
+# Inert diagnostic proposal. Intended destination: .github/workflows/d02-feasibility.yml.
+# Publication/activation was blocked by MCP workflow-write authorization.
+name: D02 feasibility canary
+
+on:
+  push:
+    branches: [feature/D02-feasibility]
+
+permissions: {}
+
+concurrency:
+  group: d02-feasibility-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-canary:
+    if: github.event.repository.private == false && github.repository == 'vojtadtenis-personal/voice-copilot' && github.ref == 'refs/heads/feature/D02-feasibility'
+    runs-on: windows-2025
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Read exact public commit without credentials
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git init --quiet .
+          git remote add origin https://github.com/vojtadtenis-personal/voice-copilot.git
+          git fetch --quiet --depth 1 origin $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'Public fetch failed.' }
+          git checkout --quiet --detach FETCH_HEAD
+          if ((git rev-parse HEAD) -ne $env:GITHUB_SHA) { throw 'Unexpected checkout.' }
+      - name: Pinned build and unattended owned-window canary
+        run: |
+          .\probes\D02.Feasibility\Invoke-Probes.ps1 -Case ui-canary
+      - name: Sanitized evidence in job summary only
+        if: always()
+        run: |
+          "## D02 standard public Windows canary" >> $env:GITHUB_STEP_SUMMARY
+          "Commit: $env:GITHUB_SHA" >> $env:GITHUB_STEP_SUMMARY
+          "Runner image: $env:ImageOS / $env:ImageVersion" >> $env:GITHUB_STEP_SUMMARY
+          "No Copilot credentials/live calls; no artifacts, cache, services, marketplace actions or paid runners." >> $env:GITHUB_STEP_SUMMARY
+          $log = '.\probes\D02.Feasibility\.assets\ui-canary.log'
+          if (Test-Path $log) {
+            '```text' >> $env:GITHUB_STEP_SUMMARY
+            Get-Content $log >> $env:GITHUB_STEP_SUMMARY
+            '```' >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            'Canary did not execute: inspect build/checkout failure in job log. This is not a pass.' >> $env:GITHUB_STEP_SUMMARY
+          }
